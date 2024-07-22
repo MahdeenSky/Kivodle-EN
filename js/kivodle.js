@@ -67,27 +67,38 @@ function convertToHiragana(str) {
     }).toLowerCase();
 }
 
+function formatStudent(student) {
+    if (!student.id) return student.text;
+    const $student = $(
+        `<span><img src="${$(student.element).find('img').attr('src')}" class="student-icon" /> ${student.text}</span>`
+    );
+    return $student;
+}
+
 // Execute once when the page loads
 function pageLoad() {
     const yesterdayStr = `${now.getUTCFullYear()}/${now.getUTCMonth() + 1}/${now.getUTCDate() - 1}`;
+
+    // cool stuff to prevent things that are not implemented yet
     implementedStudents = students.filter(student => guessDate(student.data.implementationDate, yesterdayStr) !== after);
 
     currentMode = modes.daily; // Default to Daily Mode on load
     setup();
+    // console.log(students)
 
-    // Populate dropdown list with student names
+    // Populate dropdown list with student names and icons
     implementedStudents.forEach(student => {
         $('#selectGuess').append(
             $('<option>')
-                .html(student.studentName)
+                .html(`<img src="${student.data.imageUrl}" alt="${student.studentName}" class="student-icon"> ${student.studentName}`)
                 .val(student.studentName)
                 .attr('data-search-hiragana', convertToHiragana(student.studentName))
         );
     });
 
-    // Initialize Select2 with custom width and search matcher
+    // Initialize Select2 with custom width, search matcher, and templateResult
     $('#selectGuess').select2({
-        width: 'resolve', 
+        width: 'resolve',
         matcher: (params, data) => {
             const term = $.trim(params.term);
             if (term === '') return data;
@@ -100,7 +111,9 @@ function pageLoad() {
             }
 
             return null;
-        }
+        },
+        templateResult: formatStudent,
+        templateSelection: formatStudent
     });
 
     // Display the about modal if this is the user's first visit
@@ -344,7 +357,7 @@ function answerProcess(guessedName, loadFlg = false) {
     }
 
     if (judgeObj.isHit === same || tries === maxTries) {
-        endGame(judgeObj.isHit, loadFlg); 
+        endGame(judgeObj.isHit, loadFlg);
     } else {
         setTriesAreaInGame();
         $('#buttonGuess').prop('disabled', false);
@@ -375,7 +388,8 @@ function prependTableRow(guessed, judgeObj) {
             .html(content);
     }
 
-    $newRow.append(createCell(guessed.studentName, judgeObj.isHit));
+    const studentNameWithIcon = `<img src="${guessed.data.imageUrl}" alt="${guessed.studentName}" class="student-icon"> ${guessed.studentName}`;
+    $newRow.append(createCell(studentNameWithIcon, judgeObj.isHit));
     $newRow.append(createCell(weapons[guessed.data.weapon], judgeObj.isSameWeapon));
 
     const classNames = Object.entries(classes)
@@ -402,8 +416,8 @@ function endGame(isHit, loadFlg = false) {
     // Update the attempts counter to show the final attempt
     setTriesAreaInGame();
 
-    const result = `${isHit === same ? 'Correct!' : 'Incorrect...'} The answer was "${target.studentName}".`;
-    $('#resultArea').html(result).addClass(isHit);
+    const resultWithIcon = `${isHit === same ? 'Correct!' : 'Incorrect...'} The answer was "<img src="${target.data.imageUrl}" alt="${target.studentName}" class="student-icon"> ${target.studentName}".`;
+    $('#resultArea').html(resultWithIcon).addClass(isHit);
     $('#guessArea').addClass('fold');
     $('#infoArea').append($('<div>').attr('id', 'infoButtonArea'));
 
@@ -443,9 +457,9 @@ function endGame(isHit, loadFlg = false) {
             if (!getLocalStorage(keySpeedrunHighScore) || speedrunSum < getLocalStorage(keySpeedrunHighScore)) {
                 setLocalStorage(keySpeedrunHighScore, speedrunSum);
             }
-            setWinStreakAreaForSpeedrun(); 
+            setWinStreakAreaForSpeedrun();
             insertShareButton(createShareStrForSpeedrun(encodedTime));
-            insertRetryButton(); 
+            insertRetryButton();
         } else {
             insertSingleButton('nextButton', 'Next', () => startSpeedrun(true));
         }
@@ -514,7 +528,7 @@ function setupDom() {
     $('#infoArea').removeClass(same).removeClass(wrong);
     $('#checkGridBody').empty();
     $('#infoButtonArea').remove();
-    $('#buttonGuess').prop('disabled', false); 
+    $('#buttonGuess').prop('disabled', false);
 }
 
 // Function to add a single button to the UI
@@ -555,12 +569,19 @@ function millisecondToEncodedStr(milliseconds) {
     const totalSeconds = Math.floor(milliseconds / 1000);
     const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
     const seconds = (totalSeconds % 60).toString().padStart(2, '0');
-    const millisecondsPart = (milliseconds % 1000).toString().padStart(3, '0'); 
-    return `${minutes}:${seconds}.${millisecondsPart}`; 
+    const millisecondsPart = (milliseconds % 1000).toString().padStart(3, '0');
+    return `${minutes}:${seconds}.${millisecondsPart}`;
 }
 
 // Function to open the modal
 function openModal() {
+    const html = $.ajax({
+        url: 'resource/about.html',
+        async: false
+    }).responseText;
+
+    $('#modal').html(html);
+    $('#modalClose, #modalOverlay').on('click', closeModal);
     $('#modalOverlay').addClass('open');
     $('#modal').addClass('open');
 }

@@ -208,7 +208,9 @@ let studentImageUrls = [
     "//static.miraheze.org/bluearchivewiki/thumb/9/9f/Asuna.png/100px-Asuna.png",
     "//static.miraheze.org/bluearchivewiki/thumb/a/a4/Asuna_%28Bunny_Girl%29.png/100px-Asuna_%28Bunny_Girl%29.png",
     "//static.miraheze.org/bluearchivewiki/thumb/c/c7/Atsuko.png/100px-Atsuko.png",
+
     "https://static.wikia.nocookie.net/blue-archive/images/8/83/Atsuko_Undersuit_Icon.png/revision/latest/scale-to-width/360?cb=20221124072528",
+
     "//static.miraheze.org/bluearchivewiki/thumb/f/f6/Ayane_%28Swimsuit%29.png/100px-Ayane_%28Swimsuit%29.png",
     "//static.miraheze.org/bluearchivewiki/thumb/a/a7/Ayane.png/100px-Ayane.png",
     "//static.miraheze.org/bluearchivewiki/thumb/0/0f/Arisu.png/100px-Arisu.png",
@@ -260,7 +262,8 @@ let studentImageUrls = [
 
     "//static.miraheze.org/bluearchivewiki/thumb/a/af/Koyuki.png/100px-Koyuki.png",
     "//static.miraheze.org/bluearchivewiki/thumb/4/46/Saori.png/100px-Saori.png",
-    "None [Saori (Swimsuit)]",
+
+    "https://i.imgur.com/PIMLPmu.png",
 
     "//static.miraheze.org/bluearchivewiki/thumb/d/d0/Saki.png/100px-Saki.png",
     "//static.miraheze.org/bluearchivewiki/thumb/1/13/Saki_%28Swimsuit%29.png/100px-Saki_%28Swimsuit%29.png",
@@ -280,7 +283,9 @@ let studentImageUrls = [
     "//static.miraheze.org/bluearchivewiki/thumb/6/63/Shiroko.png/100px-Shiroko.png",
     "//static.miraheze.org/bluearchivewiki/thumb/a/a0/Shiroko_%28Riding%29.png/100px-Shiroko_%28Riding%29.png",
     "//static.miraheze.org/bluearchivewiki/thumb/4/4e/Shiroko_%28Swimsuit%29.png/100px-Shiroko_%28Swimsuit%29.png",
+
     "https://bluearchive.fandom.com/wiki/File:Shiroko_Terror_Icon.png",
+
     "//static.miraheze.org/bluearchivewiki/thumb/0/07/Suzumi.png/100px-Suzumi.png",
     "//static.miraheze.org/bluearchivewiki/thumb/d/d6/Sumire.png/100px-Sumire.png",
     "//static.miraheze.org/bluearchivewiki/thumb/f/f4/Sena.png/100px-Sena.png",
@@ -296,7 +301,9 @@ let studentImageUrls = [
     "//static.miraheze.org/bluearchivewiki/thumb/b/b6/Chinatsu.png/100px-Chinatsu.png",
     "//static.miraheze.org/bluearchivewiki/thumb/b/b1/Chinatsu_%28Hot_Spring%29.png/100px-Chinatsu_%28Hot_Spring%29.png",
     "//static.miraheze.org/bluearchivewiki/thumb/a/a7/Chihiro.png/100px-Chihiro.png",
+
     "https://bluearchive.fandom.com/wiki/File:Tsukuyo_Icon.png",
+
     "//static.miraheze.org/bluearchivewiki/thumb/6/6a/Tsubaki.png/100px-Tsubaki.png",
     "//static.miraheze.org/bluearchivewiki/thumb/e/ef/Tsubaki_%28Guide%29.png/100px-Tsubaki_%28Guide%29.png",
     "//static.miraheze.org/bluearchivewiki/thumb/c/c1/Tsurugi.png/100px-Tsurugi.png",
@@ -337,14 +344,18 @@ let studentImageUrls = [
     "//static.miraheze.org/bluearchivewiki/thumb/3/32/Hifumi_%28Swimsuit%29.png/100px-Hifumi_%28Swimsuit%29.png",
     "//static.miraheze.org/bluearchivewiki/thumb/5/5a/Himari.png/100px-Himari.png",
     "//static.miraheze.org/bluearchivewiki/thumb/7/76/Hiyori.png/100px-Hiyori.png",
-    "None [Hiyori (Swimsuit)]",
+
+    "https://i.imgur.com/MCPNOQ1.png",
+
     "//static.miraheze.org/bluearchivewiki/thumb/9/96/Pina.png/100px-Pina.png",
     "//static.miraheze.org/bluearchivewiki/thumb/1/1f/Fuuka.png/100px-Fuuka.png",
     "//static.miraheze.org/bluearchivewiki/thumb/1/13/Fuuka_%28New_Year%29.png/100px-Fuuka_%28New_Year%29.png",
     "//static.miraheze.org/bluearchivewiki/thumb/c/cd/Fubuki.png/100px-Fubuki.png",
     "//static.miraheze.org/bluearchivewiki/thumb/3/34/Fubuki_%28Swimsuit%29.png/100px-Fubuki_%28Swimsuit%29.png",
     "//static.miraheze.org/bluearchivewiki/thumb/a/a9/Hoshino.png/100px-Hoshino.png",
-    "None [Hoshino (Combat)]",
+
+    "https://i.imgur.com/9LL1dzN.png",
+
     "//static.miraheze.org/bluearchivewiki/thumb/c/c2/Hoshino_%28Swimsuit%29.png/100px-Hoshino_%28Swimsuit%29.png",
     "//static.miraheze.org/bluearchivewiki/thumb/2/21/Maki.png/100px-Maki.png",
     "//static.miraheze.org/bluearchivewiki/thumb/2/20/Makoto.png/100px-Makoto.png",
@@ -392,7 +403,6 @@ let studentImageUrls = [
     "//static.miraheze.org/bluearchivewiki/thumb/b/b0/Saten_Ruiko.png/100px-Saten_Ruiko.png",
     "//static.miraheze.org/bluearchivewiki/thumb/9/93/Hatsune_Miku.png/100px-Hatsune_Miku.png",
     "//static.miraheze.org/bluearchivewiki/thumb/6/66/Shokuhou_Misaki.png/100px-Shokuhou_Misaki.png",
-
   ];
 
 // assuming studentImageUrls is an array of URLs with the same order as students, place the imageUrls in the students array as a new property

@@ -1,6 +1,10 @@
 # CHANGELOG
 All notable changes to this project will be documented in this file.
 
+## [Version 1.1]
+### Added
+- Character Icons
+
 ## [Version 1.0]
 ### Fixed
 - Lame Design
