@@ -1,153 +1,174 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 
 <head>
-    <title>Kivodle</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
-        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-    <script src="https://magicant.github.io/sjavascript/mt.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script src="./js/kivodle.js"></script>
-    <script src="./js/students.js"></script>
+    <title>Kivodle</title>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="css/kivodle.css" type="text/css">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 </head>
 
-<body onload="pageLoad()">
-    <nav id="menuBar">
-        <ul>
-            <li><a href="" onclick="switchMode(modes.daily); return false;">▽デイリーモード</a></li>
-            <li><a href="" onclick="switchMode(modes.endless); return false;">▽エンドレスモード</a></li>
-            <li><a href="" onclick="switchMode(modes.speedrun); return false;">▽スピードランモード</a></li>
-            <li><a href="" onclick="openModal(); return false;">▽Kivodleについて</a></li>
-        </ul>
-    </nav>
-    <div id="app">
-        <div id="logoArea">
-            <img id="logo" src="resource/logo.png">
-        </div>
-        <div id="infoArea">
-            <div id="modeInfoArea">
-                <div id="modeNameArea"></div>
-                <div id="modeWinStreakArea"></div>
+<body>
+    <div id="video-background">
+        <video autoplay muted loop>
+            <source src="resource/[Blue Archive] Title screen BGM. Mitsukiyo - Constant Moderato.mp4" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+    <div class="content-wrapper">
+        <nav id="menuBar">
+            <ul>
+                <li><a href="" data-mode="daily" onclick="switchMode(modes.daily); return false;">Daily Mode</a></li>
+                <li><a href="" data-mode="endless" onclick="switchMode(modes.endless); return false;">Endless Mode</a></li>
+                <li><a href="" data-mode="speedrun" onclick="switchMode(modes.speedrun); return false;">Speedrun Mode</a></li>
+                <li><a href="" id="openModalBtn">About Kivodle</a></li>
+            </ul>
+        </nav>
+
+        <div id="app">
+            <div id="logoArea">
+                <img id="logo" src="resource/logo.png" alt="Kivodle Logo">
             </div>
-            <div id="triesArea"></div>
-        </div>
-        <div id="guessArea">
-            <select id="selectGuess" style="width: calc(81% - 7px);">
-            </select>
-            <button id="buttonGuess" class="btn btnYellow" onclick="answerProcess($('#selectGuess').val())"><div class="btnText">解答</div></button>
-        </div>
-        <div id="checkArea">
-            <div id="checkGrid">
-                <div id="checkGridHeader">
-                    <div class="row">
-                        <div class="header studentNameCol">キャラ名</div>
-                        <div class="header weaponTypeCol">武器種</div>
-                        <div class="header classCol">クラス</div>
-                        <div class="header schoolCol">学校</div>
-                        <div class="header attackTypeCol">攻撃属性</div>
-                        <div class="header implDateCol">実装日</div>
-                    </div>
+
+            <div id="infoArea">
+                <div id="modeInfoArea">
+                    <div id="modeNameArea"></div>
+                    <div id="modeStatsArea"></div>
                 </div>
-                <div id="checkGridBody">
-                </div>
+                <div id="triesArea"></div>
+                <div id="resultArea"></div> 
+            </div>
+
+            <div id="guessArea">
+                <select id="selectGuess">
+                </select>
+                <button id="buttonGuess" class="btn btn-yellow" disabled>Guess</button>
+            </div>
+
+            <div id="checkArea">
+                <table id="checkGrid">
+                    <thead>
+                        <tr>
+                            <th>Character</th>
+                            <th>Weapon</th>
+                            <th>Class</th>
+                            <th>School</th>
+                            <th>Attack</th>
+                            <th>Release</th>
+                        </tr>
+                    </thead>
+                    <tbody id="checkGridBody">
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
-    <div id="modal">
-        <div id="modalClose" onclick="closeModal();">×</div>
+
+    <div id="modal" class="open">
+        <div id="modalClose">×</div>
         <div id="modalInner">
-            <div>
-                <h2>Kivodleって何？</h2>
-                <p>
-                    スマホゲーム「<a
-                        href="https://bluearchive.jp/">ブルーアーカイブ</a>」にプレイアブルとして登場する生徒（キャラクター）から１人が正解として選ばれるので、その生徒の特徴から推理しようというゲームです。
-                </p>
-            </div>
-            <div>
-                <h2>遊び方</h2>
-                <ol>
-                    <li>プルダウンリストから生徒を１人選んで「解答」ボタンを押す。</li>
-                    <li>
-                        選んだ生徒と正解の生徒との間で「武器種」「クラス」「学校」「攻撃属性」「実装日」の比較を行う。<br>
-                        一致している場合は<span class="same">緑背景</span>、そうでない場合は<span class="wrong">赤背景</span>になる。<br>
-                        さらに、実装日は正解の生徒の実装日が選んだ生徒の実装日より前か後かも表示される。<br>
-                    </li>
-                    <li>
-                        2.の内容をもとに推理して1.を行い、５回以内に正解の生徒を当てられればクリア。<br>
-                        そうでない場合はゲームオーバー。
-                    </li>
-                </ol>
-            </div>
-            <div>
-                <h2>モードについて</h2>
-                <h3>デイリーモード</h3>
-                <p>
-                    日替わりで正解が変化します。正解は全ユーザーで共通です。<br>
-                    正解が切り替わるタイミングは日本時間で午前4時（世界標準時で19時）です。<br>
-                    本家Wordleのように結果をシェアできます。<br>
-                    ゲームの途中でブラウザやタブを閉じても、その時に遊んでいたデータはブラウザに保存されます。
-                </p>
-                <h3>エンドレスモード</h3>
-                <p>
-                    遊ぶたびに正解が変化し、連続正解数が記録されます。<br>
-                    不正解でゲームオーバーになった時、何回連続で正解できたかをシェアできます。<br>
-                    ゲームの途中でブラウザやタブを閉じても、その時に遊んでいたデータはブラウザに保存されます。
-                </p>
-                <h3>スピードランモード</h3>
-                <p>
-                    遊ぶたびに正解が変化し、10問正解するまでの時間が記録されます。<br>
-                    不正解してもゲームオーバーになりません。<br>
-                    正解または不正解の判定が出てから「次の問題へ」のボタンを押すまでの間の時間は記録されません。<br>
-                    <span style="color: red;">このモードのみ、ゲームの途中でブラウザやタブを閉じると、その時点での結果は破棄されます。</span>
-                </p>
-            </div>
-            <div>
-                <h2>注意事項</h2>
-                <ul>
-                    <li>更新履歴は<a href="https://github.com/TaktstockJp/Kivodle/blob/main/CHANGELOG.md">こちら</a>を参照してください。
-                    </li>
-                    <li>2024/07/22現在、サオリ（水着）、ヒヨリ（水着）のデータまで追加済みです。</li>
-                    <li>新しい生徒はゲームで実装された日の翌日からリストに追加・正解として選ばれる対象になります。</li>
-                    <li>コラボ生徒の「学校」は全員「その他」となります。</li>
-                    <li>ホシノ（臨戦）は、タンクでもありアタッカーでもあるとして扱われます。</li>
-                </ul>
-            </div>
-            <div>
-                <h2>不具合報告等について</h2>
-                <p style="margin-bottom: 2px;">以下のいずれかにお願いします。</p>
-                <ul>
-                    <li><a href="https://github.com/TaktstockJp/Kivodle/issues">GitHubのIssues</a></li>
-                    <li><a href="https://misskey.io/@Taktstock_mov">作者のmisskey.ioアカウント</a></li>
-                </ul>
-            </div>
-            <div>
-                <h2>お借りしたものなど</h2>
-                <ul>
-                    <li><a href="https://bluearchive.wikiru.jp/">ブルーアーカイブ（ブルアカ）攻略 Wiki</a>：生徒のデータを参照させていただきました。</li>
-                    <li><a href="https://tmp.nulla.top/ba-logo/">BlueArchive-Style Logo
-                            Generator</a>：ロゴを生成して使用させていただきました。</li>
-                    <li><a href="https://jquery.com/">jQuery</a></li>
-                    <li><a href="https://magicant.github.io/sjavascript/mt.html">Mersenne Twister in JavaScript</a></li>
-                    <li><a href="https://select2.org/">Select2</a></li>
-                </ul>
-            </div>
-            <div>
-                <h2>リポジトリ</h2>
-                <p>リポジトリは<a href="https://github.com/TaktstockJp/Kivodle">こちら</a>。ソースコードはMIT Licenseで提供されています。</p>
-            </div>
-            <div>
-                <h2>その他</h2>
-                <p>
-                    Kivodleは非公式であり、Nexon、Nexon GamesおよびYostarとは一切関係ありません。<br>
-                    当サイトで使用されている情報の所有権および著作権はそれぞれの権利者に帰属します。<br>
-                </p>
-            </div>
+            <h2>What is Kivodle?</h2>
+            <p>
+                A game where you guess a playable student (character) from the mobile game
+                "<a href="https://bluearchive.jp/">Blue Archive</a>". Use clues based on the student's traits to deduce
+                the correct answer.
+            </p>
+            <h2>How to Play</h2>
+            <ol>
+                <li>Select a student from the dropdown list and click "Guess".</li>
+                <li>
+                    The game compares your chosen student with the correct answer across five categories: "Weapon",
+                    "Class", "School", "Attack Type", and "Release Date".<br>
+                    A <span class="same">green background</span> indicates a match, while a <span
+                        class="wrong">red background</span> indicates a mismatch.
+                    For "Release Date", you'll also see whether the correct student's release date is before or after
+                    your chosen student's.
+                </li>
+                <li>
+                    Deduce the correct student within five guesses based on the clues from step 2 to win the
+                    game. Failing to do so results in a game over.
+                </li>
+            </ol>
+
+            <h2>Game Modes</h2>
+            <h3>Daily Mode</h3>
+            <p>
+                The correct answer changes daily and is the same for all players.<br>
+                The answer resets at 4:00 AM Japan Standard Time (19:00 UTC).<br>
+                Share your results just like the original Wordle!<br>
+                Your game progress is automatically saved in your browser even if you close the tab or browser
+                mid-game.
+            </p>
+            <h3>Endless Mode</h3>
+            <p>
+                The correct answer changes after each game, and your win streak is recorded.<br>
+                Share your win streak when you get a wrong answer and the game ends.<br>
+                Your game progress is automatically saved in your browser even if you close the tab or browser
+                mid-game.
+            </p>
+            <h3>Speedrun Mode</h3>
+            <p>
+                The correct answer changes after each game, and the time taken to solve 10 questions is recorded.<br>
+                The game doesn't end even if you get a wrong answer.<br>
+                The time between the answer reveal and clicking "Next Question" is not recorded.<br>
+                <span style="color: red;">Please note that closing the browser or tab during this mode will
+                    discard your current progress.</span>
+            </p>
+
+            <h2>Notes</h2>
+            <ul>
+                <li>See <a href="https://github.com/TaktstockJp/Kivodle/blob/main/CHANGELOG.md">here</a> for
+                    the update history.</li>
+                <li>As of July 22nd, 2024, the game includes data up to Saori (Swimsuit) and Hiyori
+                    (Swimsuit).</li>
+                <li>New students will be added to the list and eligible as correct answers starting the day after
+                    their in-game release.</li>
+                <li>All collaboration students are categorized under "Others" for the "School" category.</li>
+                <li>Hoshino (B) is treated as both a Tank and an Attacker.</li>
+            </ul>
+
+            <h2>Bug Reports and Feedback</h2>
+            <p style="margin-bottom: 2px;">Please submit any bug reports or feedback through one of the following
+                channels:</p>
+            <ul>
+                <li><a href="https://github.com/TaktstockJp/Kivodle/issues">GitHub Issues</a></li>
+                <li><a href="https://misskey.io/@Taktstock_mov">Creator's misskey.io account</a></li>
+            </ul>
+
+            <h2>Acknowledgements</h2>
+            <ul>
+                <li><a href="https://bluearchive.wikiru.jp/">Blue Archive (BA) Strategy Wiki</a>: Used as a
+                    reference for student data. </li>
+                <li><a href="https://tmp.nulla.top/ba-logo/">BlueArchive-Style Logo Generator</a>: Used
+                    to generate the logo.</li>
+                <li><a href="https://jquery.com/">jQuery</a></li>
+                <li><a href="https://magicant.github.io/sjavascript/mt.html">Mersenne Twister in JavaScript</a>
+                </li>
+                <li><a href="https://select2.org/">Select2</a></li>
+            </ul>
+
+            <h2>Repository</h2>
+            <p>The repository can be found <a href="https://github.com/TaktstockJp/Kivodle">here</a>. The source
+                code is licensed under the MIT License.</p>
+
+            <h2>Disclaimer</h2>
+            <p>
+                Kivodle is an unofficial fan project and is not affiliated with Nexon, Nexon Games, or
+                Yostar.<br>
+                All intellectual property rights and copyrights belong to their respective owners.
+            </p>
         </div>
     </div>
-    <div id="modalOverlay" onclick="closeModal();"></div>
+    <div id="modalOverlay"></div>
+
+    <!-- Import scripts at the end of the body for better performance -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://magicant.github.io/sjavascript/mt.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="./js/students.js"></script>
+    <script src="./js/kivodle.js"></script>
 </body>
 
 </html>

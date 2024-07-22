@@ -1,15 +1,16 @@
 const maxTries = 5;
 const speedrunMaxStreak = 10;
 const weapons = Object.freeze(['SG', 'SMG', 'AR', 'GL', 'HG', 'RL', 'SR', 'RG', 'MG', 'MT', 'FT']);
-const classes = Object.freeze({ 0b00001: 'タンク', 0b00010: 'アタッカー', 0b00100: 'ヒーラー', 0b01000: 'サポーター', 0b10000: 'T.S' });
-const schools = Object.freeze(['百鬼夜行', 'レッドウィンター', 'トリニティ', 'ゲヘナ', 'アビドス', 'ミレニアム', 'アリウス', '山海経', 'ヴァルキューレ', 'SRT', 'その他']);
-const attackTypes = Object.freeze(['爆発', '貫通', '神秘', '振動']);
-const modes = Object.freeze({ daily: 'デイリー', endless: 'エンドレス', speedrun: 'スピードラン' });
+const classes = Object.freeze({ 0b00001: 'Tank', 0b00010: 'Attacker', 0b00100: 'Healer', 0b01000: 'Support', 0b10000: 'T.S' });
+const schools = Object.freeze(['Byakuyakou', 'Red Winter', 'Trinity', 'Gehenna', 'Abydos', 'Millennium', 'Arius', 'Shanhaijing', 'Valkyrie', 'SRT', 'Others']);
+const attackTypes = Object.freeze(['Explosion', 'Penetration', 'Mystic', 'Sonic']);
+const modes = Object.freeze({ daily: 'Daily', endless: 'Endless', speedrun: 'Speedrun' });
 const same = 'same';
 const wrong = 'wrong';
-const before = 'より前';
-const after = 'より後';
+const before = 'Before'; // Adjusted capitalization for consistency
+const after = 'After';  // Adjusted capitalization for consistency
 
+// Local Storage Keys
 const keyGeneralVisited = 'Kivodle.General.Visited';
 const keyDailyLastPlayed = 'Kivodle.Daily.LastPlayed';
 const keyDailyGuesses = 'Kivodle.Daily.Guesses';
@@ -20,6 +21,7 @@ const keyEndlessCorrects = 'Kivodle.Endless.Corrects';
 const keyEndlessHighScore = 'Kivodle.Endless.HighScore';
 const keySpeedrunHighScore = 'Kivodle.Speedrun.HighScore';
 
+// Global Variables
 let target;
 let tries;
 let corrects = 0;
@@ -29,73 +31,121 @@ let guesses = [];
 let speedrunStart;
 let speedrunSum;
 let intervalId;
-const judges = [];
+let judges = [];
 const now = getToday();
 
-// ページロード時に1回だけ実行する
+// Function to get today's date (adjusted for UTC time)
+function getToday() {
+    const today = new Date();
+    if (today.getUTCHours() >= 19) {
+        today.setUTCDate(today.getUTCDate() + 1);
+    }
+    return today;
+}
+
+// Function to get data from LocalStorage
+function getLocalStorage(key) {
+    const item = localStorage.getItem(key);
+    return item ? JSON.parse(item) : null;
+}
+
+// Function to set data in LocalStorage
+function setLocalStorage(key, value) {
+    localStorage.setItem(key, JSON.stringify(value));
+}
+
+// Function to remove data from LocalStorage
+function removeLocalStorage(key) {
+    localStorage.removeItem(key);
+}
+
+// Function to convert Katakana to Hiragana
+function convertToHiragana(str) {
+    return str.replace(/[\u30a1-\u30f6]/g, function (match) {
+        const chrCode = match.charCodeAt(0) - 0x60;
+        return String.fromCharCode(chrCode);
+    }).toLowerCase();
+}
+
+// Execute once when the page loads
 function pageLoad() {
-    // 実装されて1日経っていない生徒を除外する処理
-    const yesterdayStr = `${String(now.getUTCFullYear())}/${String(now.getUTCMonth() + 1)}/${String(now.getUTCDate() - 1)}`;
-    implementedStudents = students.filter(student => {
-        return guessDate(student.data.implementationDate, yesterdayStr) !== after;
-    });
+    const yesterdayStr = `${now.getUTCFullYear()}/${now.getUTCMonth() + 1}/${now.getUTCDate() - 1}`;
+    implementedStudents = students.filter(student => guessDate(student.data.implementationDate, yesterdayStr) !== after);
 
-    // ページを開いた時はモードをデイリーモードに設定
-    currentMode = modes.daily;
-
+    currentMode = modes.daily; // Default to Daily Mode on load
     setup();
 
-    // プルダウンリストに値を設定する
-    implementedStudents.forEach(function (element) {
-        $('#selectGuess').append($('<option>').html(element.studentName).val(element.studentName).attr('data-search-hiragana', convertToHiragana(element.studentName)));
+    // Populate dropdown list with student names
+    implementedStudents.forEach(student => {
+        $('#selectGuess').append(
+            $('<option>')
+                .html(student.studentName)
+                .val(student.studentName)
+                .attr('data-search-hiragana', convertToHiragana(student.studentName))
+        );
     });
 
-    // 横幅とCustomMatcherの登録
+    // Initialize Select2 with custom width and search matcher
     $('#selectGuess').select2({
-        width: 'resolve',
-        matcher: function (params, data) {
-            const select2SearchStr = $(data.element).data('search-hiragana');
-            let modifiedData;
-            if ($.trim(params.term) === '') {
-                return data;
-            }
-            if (typeof data.text === 'undefined') {
-                return null;
-            }
-            if (data.text.indexOf(params.term) > -1) {
-                modifiedData = $.extend({}, data, true);
-                return modifiedData;
+        width: 'resolve', 
+        matcher: (params, data) => {
+            const term = $.trim(params.term);
+            if (term === '') return data;
+
+            const text = data.text || '';
+            const hiragana = $(data.element).data('search-hiragana') || '';
+
+            if (text.indexOf(term) > -1 || hiragana.indexOf(term) > -1) {
+                return $.extend({}, data, true); // Return a copy of the data object
             }
 
-            if (select2SearchStr === null || select2SearchStr === void 0) {
-                return null;
-            }
-            if (select2SearchStr.toString().indexOf(params.term) > -1) {
-                modifiedData = $.extend({}, data, true);
-                return modifiedData;
-            }
             return null;
         }
     });
 
-    // サイトを初めて訪れる場合、説明用のモーダルを表示
+    // Display the about modal if this is the user's first visit
     if (!getLocalStorage(keyGeneralVisited)) {
         setLocalStorage(keyGeneralVisited, true);
         openModal();
     }
+
+    // Attach event listeners to mode switching links
+    $('#menuBar a').on('click', function(event) {
+        event.preventDefault(); // Prevent default link behavior
+        const mode = $(this).data('mode');
+        switchMode(mode);
+    });
+
+    // Attach event listener to "Guess" button
+    $('#buttonGuess').on('click', () => {
+        answerProcess($('#selectGuess').val());
+    });
+
+    // Event listener for opening the modal
+    $('#openModalBtn').on('click', function(event) {
+        event.preventDefault();
+        openModal();
+    });
+
+    // Event listener for closing the modal
+    $('#modalClose, #modalOverlay').on('click', closeModal);
+
 }
 
-// ゲームの初期化
+// Function to initialize or reset the game
 function setup(nextFlg = false) {
-    // 解答回数の初期化
     tries = 0;
+    guesses = [];
+    judges = [];
 
-    // 変数とDOMの初期化
-    guesses.splice(0);
-    judges.splice(0);
-    setupDom();
+    setTriesAreaInGame();
+    $('#guessArea').removeClass('fold');
+    $('#infoArea').removeClass(same).removeClass(wrong);
+    $('#checkGridBody').empty();
+    $('#infoButtonArea').remove();
+    $('#resultArea').empty();
+    $('#buttonGuess').prop('disabled', false);
 
-    // モード別処理
     switch (currentMode) {
         case modes.daily:
             setupDailyMode();
@@ -109,36 +159,20 @@ function setup(nextFlg = false) {
         default:
             currentMode = modes.daily;
             setupDailyMode();
-            break;
     }
-
-    // ロード後に解答回数を使い切っていない場合ボタンを有効化
-    if (tries < maxTries) { $("#buttonGuess").removeAttr('disabled'); }
 }
 
-function setupDom() {
-    setTriesAreaInGame();
-    $('#guessArea').removeClass('fold');
-    $('#infoArea').removeClass(same).removeClass(wrong);
-    $('#checkGridBody').empty();
-    $('#infoButtonArea').remove();
-    $("#buttonGuess").removeAttr('disabled');
-}
-
-// デイリーモードセットアップ時の処理
+// Function to set up the Daily Mode
 function setupDailyMode() {
-    // デイリーモードの正解の設定
     setTarget(now.getUTCFullYear() * 10000 + now.getUTCMonth() * 100 + now.getUTCDate());
 
-    // 今日分のセーブデータの有無によって分岐
-    const todayStr = `${now.getUTCFullYear()}/${now.getUTCMonth() + 1}/${now.getUTCDate()}`
+    const todayStr = `${now.getUTCFullYear()}/${now.getUTCMonth() + 1}/${now.getUTCDate()}`;
     const lastPlayed = getLocalStorage(keyDailyLastPlayed);
-    if (lastPlayed !== null && guessDate(todayStr, lastPlayed) === same) {
-        // セーブデータがある場合それに沿ってゲームを再現する
+
+    if (lastPlayed && guessDate(todayStr, lastPlayed) === same) {
         guesses = getLocalStorage(keyDailyGuesses) || [];
         answerForLoad();
     } else {
-        // セーブデータがないか、当日のもの以外
         removeLocalStorage(keyDailyGuesses);
         setLocalStorage(keyDailyLastPlayed, todayStr);
     }
@@ -146,163 +180,178 @@ function setupDailyMode() {
     setModeInfoAreaForDaily();
 }
 
-// エンドレスモードセットアップ時の処理
-function setupEndlessMode(nextFlg) {
-    // エンドレスモードの正解の設定
-    const lastTarget = getLocalStorage(keyEndlessTarget);
-    if (nextFlg || !lastTarget) {
-        // エンドレスモード初回、もしくは前の問題で正解して「次へ」を選んでいた場合
-        setTarget(Date.now());
-        setLocalStorage(keyEndlessTarget, target);
-        removeLocalStorage(keyEndlessGuesses);
-    } else {
-        // エンドレスモードのセーブデータのロード時
-        target = implementedStudents.find((elm) => elm.studentName === lastTarget.studentName);
-        guesses = getLocalStorage(keyEndlessGuesses) || [];
-        corrects = getLocalStorage(keyEndlessCorrects) || 0;
-        answerForLoad();
-    }
+function setupEndlessMode() {
+    setTarget(Date.now());
+    setLocalStorage(keyEndlessTarget, target.studentName);
+    removeLocalStorage(keyEndlessGuesses);
+    corrects = 0;
+    setLocalStorage(keyEndlessCorrects, corrects);
 
     setModeInfoAreaForEndless();
 }
 
-function answerForLoad() {
-    guesses.forEach(function (elm) {
-        answerProcess(elm, true);
-    });
-}
-
-// スピードランモードセットアップ時の処理
 function setupSpeedrunMode() {
     corrects = 0;
-    setupDom();
+    speedrunSum = 0;
     $('#guessArea').addClass('fold');
-    $('#modeNameArea').html('スピードランモード');
     $('#triesArea').empty();
     $('#infoArea').append($('<div>').attr('id', 'infoButtonArea'));
-    insertSingleButton('startButton', 'スタート', function () { startSpeedrun(false) })
+    insertSingleButton('startButton', 'Start', () => startSpeedrun(false));
     setWinStreakAreaForSpeedrun();
 }
 
-// スピードランの開始
-function startSpeedrun(nextFlg) {
-    // 解答回数の初期化
-    tries = 0;
+// Function to handle answer processing after loading saved data
+function answerForLoad() {
+    guesses.forEach(guess => {
+        answerProcess(guess, true);
+    });
+}
 
-    // 正解の設定
+
+
+// Function to start the Speedrun timer
+function startSpeedrun(nextFlg) {
+    tries = 0;
     setTarget(Date.now());
 
-    // 変数とDOMの初期化
-    guesses.splice(0);
-    judges.splice(0);
+    guesses = [];
+    judges = [];
     setupDom();
     setTriesAreaInGame();
 
-    // タイマーの設定
-    if (!nextFlg) { speedrunSum = 0; }
+    if (!nextFlg) {
+        speedrunSum = 0;
+    }
     speedrunStart = Date.now();
     setModeInfoAreaForSpeedrunInGame(speedrunSum);
-    intervalId = setInterval(function () { setModeInfoAreaForSpeedrunInGame((speedrunSum + (Date.now() - speedrunStart))) }, 100);
+    intervalId = setInterval(() => {
+        setModeInfoAreaForSpeedrunInGame(speedrunSum + (Date.now() - speedrunStart));
+    }, 100);
+
+    $('#guessArea').removeClass('fold'); // Show the guess area when Speedrun starts
+    $('#buttonGuess').prop('disabled', false); 
 }
 
-// triesAreaの書き換え
+// Function to update the 'triesArea' element during the game
 function setTriesAreaInGame() {
-    $('#triesArea').html(`解答回数： ${tries} ／ ${maxTries}`);
+    $('#triesArea').html(`Guesses: ${tries} / ${maxTries}`);
 }
 
+// Function to set the content of the 'modeInfoArea' for Daily Mode
 function setModeInfoAreaForDaily() {
-    $('#modeNameArea').html('デイリーモード');
-    $('#modeWinStreakArea').html(`連続正解日数：${getLocalStorage(keyDailyWinStreak) || 0}`)
+    $('#modeNameArea').html('Daily Mode');
+    $('#modeStatsArea').html(`Win Streak: ${getLocalStorage(keyDailyWinStreak) || 0}`);
 }
 
+// Function to set the content of the 'modeInfoArea' for Endless Mode
 function setModeInfoAreaForEndless() {
-    $('#modeNameArea').html(`エンドレスモード<br>現在のスコア：${corrects}`);
-    $('#modeWinStreakArea').html(`ハイスコア：${getLocalStorage(keyEndlessHighScore) || 0}`)
+    $('#modeNameArea').html(`Endless Mode<br>Current Score: ${corrects}`);
+    $('#modeStatsArea').html(`High Score: ${getLocalStorage(keyEndlessHighScore) || 0}`);
 }
 
+// Function to update the 'modeInfoArea' during Speedrun Mode
 function setModeInfoAreaForSpeedrunInGame(millisecond) {
-    const totalSecond = Math.floor(millisecond / 1000);
-    const formattedTime = `${Math.floor(totalSecond / 60).toString().padStart(2, '0')}:${(totalSecond % 60).toString().padStart(2, '0')}`;
-    $('#modeNameArea').html(`スピードランモード<br>正解数　${corrects} ／ ${speedrunMaxStreak}<br>経過時間　${formattedTime}`);
+    const totalSeconds = Math.floor(millisecond / 1000);
+    const formattedTime = `${Math.floor(totalSeconds / 60).toString().padStart(2, '0')}:${(totalSeconds % 60).toString().padStart(2, '0')}`;
+    $('#modeNameArea').html(`Speedrun Mode<br>Correct: ${corrects} / ${speedrunMaxStreak}<br>Time: ${formattedTime}`);
 }
 
+// Function to display the high score for Speedrun Mode
 function setWinStreakAreaForSpeedrun() {
     const highScore = getLocalStorage(keySpeedrunHighScore);
-    $('#modeWinStreakArea').html(`ハイスコア：${highScore ? millisecondToEncodedStr(highScore) : '記録なし'}`);
+    $('#modeStatsArea').html(`High Score: ${highScore ? millisecondToEncodedStr(highScore) : 'No Record'}`);
 }
 
-// 解答を設定する
+// Function to randomly select the correct answer (target)
 function setTarget(seed) {
-    const mt = new MersenneTwister();
-    mt.setSeed(seed);
-    target = implementedStudents[mt.nextInt(0, implementedStudents.length)];
+    const mt = new MersenneTwister(seed);
+    const randomIndex = mt.nextInt(0, implementedStudents.length);
+    target = implementedStudents[randomIndex];
 }
 
-// モードの切り替え
+// Function to switch between game modes
 function switchMode(targetMode) {
-    if (currentMode == targetMode) {
-        // 既に変更対象のモードなら何もしない
+    if (currentMode === targetMode) {
         return;
     }
 
-    // スピードランモードのモード部分書き換えの解除
-    if (intervalId !== void 0) {
+    if (intervalId) {
         clearInterval(intervalId);
-        intervalId = void 0;
+        intervalId = undefined;
     }
 
-    currentMode = targetMode;
+    currentMode = modes[targetMode];
+
+    // Reset game state
+    tries = 0;
+    guesses = [];
+    judges = [];
+    corrects = 0;
+
+    // Clear the game board
+    $('#checkGridBody').empty();
+    $('#resultArea').empty();
+    $('#infoButtonArea').remove();
+
+    // Update UI for the new mode
+    $('#guessArea').removeClass('fold');
+    $('#buttonGuess').prop('disabled', false);
+
+    // Set up the new mode
     setup();
+
+    // Update the active state in the menu
+    $('#menuBar a').removeClass('active');
+    $(`#menuBar a[data-mode="${targetMode}"]`).addClass('active');
+
+    // Update mode-specific elements
+    switch (targetMode) {
+        case 'daily':
+            setModeInfoAreaForDaily();
+            break;
+        case 'endless':
+            setModeInfoAreaForEndless();
+            break;
+        case 'speedrun':
+            setupSpeedrunMode();
+            break;
+    }
 }
 
-// 解答ボタンを押した時の処理
+// Function to process the player's guess
 function answerProcess(guessedName, loadFlg = false) {
-    // ボタンを無効化
-    $("#buttonGuess").attr('disabled', '');
+    $('#buttonGuess').prop('disabled', true);
 
-    // 引数として渡された名前から解答として選ばれた生徒のオブジェクトを取得
-    const guessed = implementedStudents.find(s => s.studentName === guessedName);
+    const guessed = implementedStudents.find(student => student.studentName === guessedName);
 
-    // 生徒がリストから見つからなかったか既に解答に使った生徒なら何もしないで戻す
-    if (guessed == null || (!loadFlg && guesses.includes(guessedName))) {
-        $("#buttonGuess").removeAttr('disabled');
-        return;
+    if (!guessed || (!loadFlg && guesses.includes(guessedName))) {
+        $('#buttonGuess').prop('disabled', false);
+        return; 
     }
 
-    // 結果判定
     const judgeObj = guess(guessed);
     judges.push(judgeObj);
-
-    // 結果からDOMに追加
     prependTableRow(guessed, judgeObj);
-
-    // 挑戦回数のインクリメント
     tries++;
 
-    // セーブデータのロード中でない場合、答えた生徒をセーブ
     if (!loadFlg) {
         guesses.push(guessedName);
-        switch (currentMode) {
-            case modes.daily:
-                setLocalStorage(keyDailyGuesses, guesses);
-                break;
-            case modes.endless:
-                setLocalStorage(keyEndlessGuesses, guesses);
-                break;
+        if (currentMode === modes.daily) {
+            setLocalStorage(keyDailyGuesses, guesses);
+        } else if (currentMode === modes.endless) {
+            setLocalStorage(keyEndlessGuesses, guesses);
         }
     }
 
     if (judgeObj.isHit === same || tries === maxTries) {
-        // 正解または回数を使い切った時の処理
-        endGame(judgeObj.isHit, loadFlg);
+        endGame(judgeObj.isHit, loadFlg); 
     } else {
-        // ゲームが途中の場合解答回数表示の更新とボタンの再有効化
         setTriesAreaInGame();
-        $("#buttonGuess").removeAttr('disabled');
+        $('#buttonGuess').prop('disabled', false);
     }
 }
 
-// 各要素ごとの正誤判定
+// Function to compare the guessed student with the target
 function guess(guessed) {
     const judgeSameOrWrong = (a, b) => a === b ? same : wrong;
     const judgeSameOrWrongBitwise = (a, b) => (a & b) !== 0 ? same : wrong;
@@ -317,116 +366,96 @@ function guess(guessed) {
     };
 }
 
-// テーブルに行を追加
 function prependTableRow(guessed, judgeObj) {
-    // セルを作成するヘルパー関数
-    function createCell(content, isCorrect, extraClasses) {
-        return $('<div>')
-            .addClass([isCorrect, 'cell', ...extraClasses])
+    const $newRow = $('<tr>').addClass('guessing');
+
+    function createCell(content, isCorrect) {
+        return $('<td>')
+            .addClass(isCorrect)
             .html(content);
     }
 
-    // クラスを表すビットからクラスの文字列を生成するヘルパー関数
-    function getClassStr(classBit) {
-        let classStrings = [];
-        for (let key in classes) {
-            if ((key & classBit) !== 0) {
-                classStrings.push(classes[key]);
-            }
-        }
-    
-        return classStrings.join('<br>');
-    }
+    $newRow.append(createCell(guessed.studentName, judgeObj.isHit));
+    $newRow.append(createCell(weapons[guessed.data.weapon], judgeObj.isSameWeapon));
 
-    // 追加する行のHTMLの組み立て
-    const $newRow = $('<div>').addClass('row');
+    const classNames = Object.entries(classes)
+        .filter(([mask, className]) => (guessed.data.class & mask) !== 0)
+        .map(([mask, className]) => className)
+        .join('<br>');
+    $newRow.append(createCell(classNames, judgeObj.isSameClass));
 
-    $newRow.append(createCell(guessed.studentName, judgeObj.isHit, ['studentNameCol']));
-    $newRow.append(createCell(weapons[guessed.data.weapon], judgeObj.isSameWeapon, ['weaponTypeCol']));
-    $newRow.append(createCell(getClassStr(guessed.data.class), judgeObj.isSameClass, ['classCol']));
-    $newRow.append(createCell(schools[guessed.data.school], judgeObj.isSameSchool, ['schoolCol']));
-    $newRow.append(createCell(attackTypes[guessed.data.attackType], judgeObj.isSameAttackType, ['attackTypeCol']));
-    const implDateContent = guessed.data.implementationDate +
-        (judgeObj.isSameImplDate === same ? '' : '<br>' + judgeObj.isSameImplDate);
-    $newRow.append(createCell(implDateContent, judgeObj.isSameImplDate === same ? same : wrong, ['implDateCol']));
+    $newRow.append(createCell(schools[guessed.data.school], judgeObj.isSameSchool));
+    $newRow.append(createCell(attackTypes[guessed.data.attackType], judgeObj.isSameAttackType));
 
-    // グリッドの一番上の行に追加
+    const implDateContent = `${guessed.data.implementationDate}<br>${judgeObj.isSameImplDate !== same ? judgeObj.isSameImplDate : ''}`;
+    $newRow.append(createCell(implDateContent, judgeObj.isSameImplDate === same ? same : wrong));
+
     $('#checkGridBody').prepend($newRow);
+
+    setTimeout(() => {
+        $newRow.removeClass('guessing');
+    }, 500);
 }
 
-// ゲーム終了時の処理
+// Function to handle the end of the game
 function endGame(isHit, loadFlg = false) {
-    const result = `${isHit === same ? '正解！' : '不正解…。'}答えは「${target.studentName}」でした。`;
+    // Update the attempts counter to show the final attempt
+    setTriesAreaInGame();
 
+    const result = `${isHit === same ? 'Correct!' : 'Incorrect...'} The answer was "${target.studentName}".`;
+    $('#resultArea').html(result).addClass(isHit);
     $('#guessArea').addClass('fold');
-    $('#infoArea').addClass(isHit);
     $('#infoArea').append($('<div>').attr('id', 'infoButtonArea'));
-    $('#triesArea').html($('<div>').html(result));
 
-    if (currentMode == modes.daily || (currentMode == modes.endless && isHit === wrong)) {
-        // デイリーモードでゲーム終了した時とエンドレスモードで正解できなかった時の処理
-        const shareStr = currentMode == modes.endless ? createShareStrForEndless() : createShareStrForDaily(isHit);
+    if (currentMode === modes.daily || (currentMode === modes.endless && isHit === wrong)) {
+        const shareStr = currentMode === modes.endless ? createShareStrForEndless() : createShareStrForDaily();
         insertShareButton(shareStr);
 
-        if (currentMode == modes.endless) {
+        if (currentMode === modes.endless) {
             insertRetryButton();
-
-            // セーブデータ削除
             corrects = 0;
             removeLocalStorage(keyEndlessTarget);
             removeLocalStorage(keyEndlessCorrects);
             removeLocalStorage(keyEndlessGuesses);
         } else if (!loadFlg) {
-            // デイリーモードかつセーブデータのロード時以外は連続正解日数の設定
-            let winStreak = getLocalStorage(keyDailyWinStreak);
-            if (isHit === same) {
-                setLocalStorage(keyDailyWinStreak, winStreak == null ? 1 : winStreak + 1);
-            } else {
-                setLocalStorage(keyDailyWinStreak, 0);
-            }
-            setModeInfoAreaForDaily();
+            let winStreak = getLocalStorage(keyDailyWinStreak) || 0;
+            setLocalStorage(keyDailyWinStreak, isHit === same ? winStreak + 1 : 0);
+            setModeInfoAreaForDaily(); 
         }
-    } else if (currentMode == modes.endless) {
-        // エンドレスモードで正解した時の処理
+    } else if (currentMode === modes.endless) {
         if (!loadFlg) {
             setLocalStorage(keyEndlessCorrects, ++corrects);
-            if (corrects > getLocalStorage(keyEndlessHighScore)) {
+            if (corrects > (getLocalStorage(keyEndlessHighScore) || 0)) {
                 setLocalStorage(keyEndlessHighScore, corrects);
             }
-            setModeInfoAreaForEndless();
+            setModeInfoAreaForEndless(); 
         }
-        insertSingleButton('nextButton', '次の問題へ', function () { setup(true) })
-    } else if (currentMode == modes.speedrun) {
-        // スピードランモード時の処理
+        insertSingleButton('nextButton', 'Next', () => setup(true));
+    } else if (currentMode === modes.speedrun) {
         speedrunSum += Date.now() - speedrunStart;
         clearInterval(intervalId);
-        corrects = corrects + (isHit === same ? 1 : 0);
+        corrects += isHit === same ? 1 : 0;
         setModeInfoAreaForSpeedrunInGame(speedrunSum);
-        if (corrects >= speedrunMaxStreak) {
-            // 指定された問題数を解き終わった時
-            const encodedTime = millisecondToEncodedStr(speedrunSum);
-            $('#triesArea').append($('<div>').html(`全${speedrunMaxStreak}問正解するのにかかった時間は ${encodedTime} でした。`));
 
-            // ハイスコアの置き換えと表示
-            const highScore = getLocalStorage(keySpeedrunHighScore);
-            if (!highScore || speedrunSum < highScore) { setLocalStorage(keySpeedrunHighScore, speedrunSum) }
-            setWinStreakAreaForSpeedrun();
+        if (corrects >= speedrunMaxStreak) {
+            const encodedTime = millisecondToEncodedStr(speedrunSum);
+            $('#resultArea').append($('<div>').html(`You solved ${speedrunMaxStreak} questions in ${encodedTime}!`));
+            if (!getLocalStorage(keySpeedrunHighScore) || speedrunSum < getLocalStorage(keySpeedrunHighScore)) {
+                setLocalStorage(keySpeedrunHighScore, speedrunSum);
+            }
+            setWinStreakAreaForSpeedrun(); 
             insertShareButton(createShareStrForSpeedrun(encodedTime));
-            insertRetryButton();
+            insertRetryButton(); 
         } else {
-            // それ以外
-            insertSingleButton('nextButton', '次の問題へ', function () { startSpeedrun(true) })
+            insertSingleButton('nextButton', 'Next', () => startSpeedrun(true));
         }
     }
 }
 
-// SNSでシェアする時の文章を作る（デイリーモード用）
-function createShareStrForDaily(isHit) {
-    let shareStr = '今日の #Kivodle は' + String(judges.length) + '回解答して';
-    shareStr += (isHit === same ? '正解しました！' : '不正解でした……。') + '\n\n';
-
-    let i;
-    for (i = judges.length - 1; i >= 0; i--) {
+// Function to create the share string for Daily Mode
+function createShareStrForDaily() {
+    let shareStr = `#Kivodle Daily - ${judges.length}/5 \n\n`; // Using /5 for a more standard Wordle format
+    for (let i = judges.length - 1; i >= 0; i--) {
         shareStr += judges[i].isHit === same ? '🟩' : '🟥';
         shareStr += judges[i].isSameWeapon === same ? '🟩' : '🟥';
         shareStr += judges[i].isSameClass === same ? '🟩' : '🟥';
@@ -435,148 +464,112 @@ function createShareStrForDaily(isHit) {
         shareStr += judges[i].isSameImplDate === same ? '🟩' : '🟥';
         shareStr += '\n';
     }
-
+    shareStr += `\n${location.href}`; // Add the game URL to the share string
     return shareStr;
 }
 
-// SNSでシェアする時の文章を作る（エンドレスモード用）
+// Function to create the share string for Endless Mode
 function createShareStrForEndless() {
-    return `#Kivodle のエンドレスモードで${corrects}問連続で正解しました！\n`;
+    return `#Kivodle Endless - I got ${corrects} correct in a row! \n\n${location.href}`; 
 }
 
-// SNSでシェアする時の文章を作る（スピードランモード用）
+// Function to create the share string for Speedrun Mode
 function createShareStrForSpeedrun(record) {
-    return `#Kivodle のスピードランモードで${speedrunMaxStreak}問正解するのにかかった時間は ${record} でした！\n`;
+    return `#Kivodle Speedrun - I completed ${speedrunMaxStreak} questions in ${record}! \n\n${location.href}`;
 }
 
-// シェアボタンをDOMに挿入する
+// Function to add buttons for sharing on different platforms
 function insertShareButton(shareStr) {
-    // ボタンのdivを作るヘルパー関数
-    function addButtonDiv(id, text, url = null) {
-        $('#shareButtonArea').append(createButton(id, 'btnCyan', text));
-        if (url !== null) {
-            $(`#${id}`).on('click', function () {
-                window.open(url);
-            })
+    const $shareButtonArea = $('<div>').attr('id', 'shareButtonArea').appendTo($('#infoButtonArea'));
+
+    function addButton(id, text, url = null) {
+        const $button = $('<button>')
+            .attr('id', id)
+            .addClass('btn btn-cyan')
+            .text(text)
+            .appendTo($shareButtonArea);
+
+        if (url) {
+            $button.on('click', () => window.open(url)); 
         }
     }
 
-    const encodedShareStr = encodeURIComponent(shareStr);
-    $('#infoButtonArea').append($('<div>').attr('id', 'shareButtonArea'));
-    addButtonDiv('copyButton', 'コピー');
-    addButtonDiv('xButton', 'Xでシェア', `https://x.com/intent/tweet?text=${encodedShareStr}%0A&url=${location.href}`);
-    addButtonDiv('misskeyButton', 'Misskeyでシェア', `https://misskey-hub.net/share/?text=${encodedShareStr}&url=${location.href}&visibility=public&localOnly=0`);
-    addButtonDiv('mastodonButton', 'Mastodonでシェア', `https://donshare.net/share.html?text=${encodedShareStr}&url=${location.href}`);
+    addButton('copyButton', 'Copy');
+    addButton('xButton', 'Share on X', `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareStr)}`);
+    addButton('misskeyButton', 'Share on Misskey', `https://misskey-hub.net/share/?text=${encodeURIComponent(shareStr)}&visibility=public&localOnly=0`);
+    addButton('mastodonButton', 'Share on Mastodon', `https://donshare.net/share.html?text=${encodeURIComponent(shareStr)}`); 
 
-    $('#copyButton').on('click', function () {
-        navigator.clipboard.writeText(`${shareStr}\n${location.href}`).then(
-            () => {
-                $('#copyButton').html($('<div>').addClass('btnText').html('コピーしました'));
-                setTimeout(function () {
-                    $('#copyButton').html($('<div>').addClass('btnText').html('コピー'));
-                }, 1000);
-            });
+    $('#copyButton').on('click', () => {
+        navigator.clipboard.writeText(shareStr).then(() => {
+            $('#copyButton').text('Copied!');
+            setTimeout(() => $('#copyButton').text('Copy'), 1000);
+        });
     });
 }
 
-function createButton(id, colorClass, text) {
-    return $('<button>').attr('id', id).addClass(['btn', colorClass]).html($('<div>').addClass('btnText').html(text))
+// Function to reset the DOM and prepare for a new game
+function setupDom() {
+    $('#triesArea').html(`Guesses: 0 / ${maxTries}`);
+    $('#guessArea').removeClass('fold');
+    $('#infoArea').removeClass(same).removeClass(wrong);
+    $('#checkGridBody').empty();
+    $('#infoButtonArea').remove();
+    $('#buttonGuess').prop('disabled', false); 
 }
 
+// Function to add a single button to the UI
+function insertSingleButton(id, text, clickHandler) {
+    // make sure button with the same id doesn't exist before creating a new one
+    if ($(`#${id}`).length) return;
+
+    const $buttonArea = $('#infoButtonArea').length ? $('#infoButtonArea') : $('<div>').attr('id', 'infoButtonArea').appendTo($('#infoArea'));
+    $('<button>')
+        .attr('id', id)
+        .addClass('btn btn-yellow')
+        .text(text)
+        .on('click', clickHandler)
+        .appendTo($buttonArea);
+}
+
+// Function to add a "Retry" button
 function insertRetryButton() {
-    insertSingleButton('retryButton', '最初から', function () { setup() })
+    insertSingleButton('retryButton', 'Retry', () => setup());
 }
 
-function insertSingleButton(id, text, triggered) {
-    $('#infoButtonArea').append($('<div>').attr('id', 'singleButtonArea'));
-    $('#singleButtonArea').append(createButton(id, 'btnYellow', text));
-    $(`#${id}`).on('click', function () { triggered() });
-}
+// Function to compare dates
+function guessDate(targetDateStr, guessDateStr) {
+    const [targetYear, targetMonth, targetDay] = targetDateStr.split('/').map(Number);
+    const [guessYear, guessMonth, guessDay] = guessDateStr.split('/').map(Number);
 
-// 日付の前後判定
-function guessDate(targetImplDate, guessImplDate) {
-    let targetArr = targetImplDate.split('/');
-    let guessArr = guessImplDate.split('/');
-
-    let i;
-    for (i = 0; i < targetArr.length; i++) {
-        if (Number(targetArr[i]) > Number(guessArr[i])) {
-            return after;
-        } else if (Number(targetArr[i]) < Number(guessArr[i])) {
-            return before;
-        }
-    }
-
+    if (targetYear > guessYear) return after;
+    if (targetYear < guessYear) return before;
+    if (targetMonth > guessMonth) return after;
+    if (targetMonth < guessMonth) return before;
+    if (targetDay > guessDay) return after;
+    if (targetDay < guessDay) return before;
     return same;
 }
 
-function millisecondToEncodedStr(millisecond) {
-    const totalSecond = Math.floor(millisecond / 1000);
-    return `${Math.floor(totalSecond / 60).toString().padStart(2, '0')}:${(totalSecond % 60).toString().padStart(2, '0')}.${(totalSecond % 1000).toString().padStart(3, '0')}`
+// Function to convert milliseconds to a formatted time string
+function millisecondToEncodedStr(milliseconds) {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+    const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+    const millisecondsPart = (milliseconds % 1000).toString().padStart(3, '0'); 
+    return `${minutes}:${seconds}.${millisecondsPart}`; 
 }
 
+// Function to open the modal
 function openModal() {
     $('#modalOverlay').addClass('open');
     $('#modal').addClass('open');
 }
 
+// Function to close the modal
 function closeModal() {
     $('#modalOverlay').removeClass('open');
     $('#modal').removeClass('open');
 }
 
-function convertToHiragana(src) {
-    const replaceDic = {
-        '（': '',
-        '）': '',
-        '＊': '',
-        '正月': 'しょうがつ',
-        '水着': 'みずぎ',
-        '私服': 'しふく',
-        '温泉': 'おんせん',
-        '幼女': 'ようじょ',
-        '体操服': 'たいそうふく',
-        '応援団': 'おうえんだん',
-        '臨戦': 'りんせん',
-        '御坂美琴': 'みさかみこと',
-        '佐天涙子': 'さてんるいこ',
-        '食蜂操祈': 'しょくほうみさき',
-        '初音': 'はつね',
-    };
-
-    let ret = src.replace(/[\u30a1-\u30f6]/g, function (match) {
-        var chr = match.charCodeAt(0) - 0x60;
-        return String.fromCharCode(chr);
-    });
-
-    for (let key in replaceDic) {
-        if (src.includes(key)) {
-            ret = ret.replace(key, replaceDic[key]);
-        }
-    }
-
-    return ret;
-}
-
-// 今日の日付を取得する
-// ただしUTCで午後19時以降（日本時間午前4時～午前9時までの間）の場合日付を1日進める
-function getToday() {
-    const today = new Date();
-    if (today.getUTCHours() >= 19) {
-        today.setUTCDate(today.getUTCDate() + 1);
-    }
-    return today;
-}
-
-function getLocalStorage(key) {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : null;
-}
-
-function setLocalStorage(key, value) {
-    localStorage.setItem(key, JSON.stringify(value));
-}
-
-function removeLocalStorage(key) {
-    localStorage.removeItem(key);
-}
+// Call pageLoad when the document is ready
+$(document).ready(pageLoad);
